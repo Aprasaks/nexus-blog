@@ -1,0 +1,13 @@
+<type>(<scope>): <subject>
+
+# 📝 Description (필수)
+# 무엇을 변경했는지 간단히 설명
+
+# 💡 Why (선택사항)  
+# 왜 이 변경이 필요한지
+
+# 🔗 Related Issues (선택사항)
+# Closes #이슈번호
+
+# Type: feat, fix, docs, style, refactor, test, chore, setup
+# Subject: 소문자로 시작, 50자 이내, 마침표 없음
