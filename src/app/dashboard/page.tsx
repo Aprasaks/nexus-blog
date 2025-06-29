@@ -1,9 +1,25 @@
-export default function DashboardPage() {
+// src/app/dashboard/page.tsx
+"use client";
+
+import StatusBar from "../../components/dashboard/StatusBar";
+import AIPanel from "../../components/dashboard/AIPanel";
+import ActivityList from "../../components/dashboard/ActivityList";
+
+export default function Dashboard() {
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <div className="flex items-center justify-center h-screen">
-        <h1 className="text-4xl font-bold">🚀 NEXUS DASHBOARD</h1>
-        <p className="text-gray-400 mt-4">메인 대시보드는 나중에 구현예정</p>
+    <div className="min-h-screen bg-gray-950 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-3">
+            <StatusBar />
+          </div>
+          <div className="lg:col-span-6">
+            <AIPanel />
+          </div>
+          <div className="lg:col-span-3">
+            <ActivityList />
+          </div>
+        </div>
       </div>
     </div>
   );
