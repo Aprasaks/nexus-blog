@@ -2,6 +2,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useGitHubPosts } from "@/lib/hooks/useGitHub";
+import {
+  START_DATE,
+  MONTH_NAMES,
+  WEEK_DAYS,
+  ANIMATION_CONFIG,
+  CATEGORY_ICONS,
+} from "@/lib/config/constants";
 
 // ==================== 타입 정의 ====================
 interface CalendarDate {
@@ -11,32 +19,6 @@ interface CalendarDate {
   firstDay: number;
   lastDate: number;
 }
-
-// ==================== 상수 ====================
-const START_DATE = new Date("2025-06-01"); // E.D.I.T.H 시작일
-
-const MONTH_NAMES = [
-  "1월",
-  "2월",
-  "3월",
-  "4월",
-  "5월",
-  "6월",
-  "7월",
-  "8월",
-  "9월",
-  "10월",
-  "11월",
-  "12월",
-] as const;
-
-const WEEK_DAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
-
-const ANIMATION_CONFIG = {
-  duration: 30,
-  interval: 50,
-  loadingDelay: 2000,
-} as const;
 
 // ==================== 유틸리티 함수 ====================
 const calculateDaysDiff = (startDate: Date, endDate: Date): number => {
@@ -60,13 +42,29 @@ const getCalendarData = (currentDate: Date): CalendarDate => ({
   ).getDate(),
 });
 
+const formatPostTitle = (filename: string): string => {
+  return filename
+    .replace(".md", "")
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (l) => l.toUpperCase());
+};
+
+const getPostCategory = (path: string): string => {
+  const parts = path.split("/");
+  return parts.length > 1 ? parts[0].toUpperCase() : "DOCS";
+};
+
+const getPostIcon = (category: string): string => {
+  return CATEGORY_ICONS[category] || CATEGORY_ICONS.DEFAULT;
+};
+
 // ==================== 커스텀 훅 ====================
 const useDayCounter = () => {
   const [days, setDays] = useState(0);
 
   useEffect(() => {
     const totalDays = calculateDaysDiff(START_DATE, new Date());
-    const increment = totalDays / ANIMATION_CONFIG.duration;
+    const increment = totalDays / ANIMATION_CONFIG.counterDuration;
 
     let current = 0;
     const timer = setInterval(() => {
@@ -77,26 +75,12 @@ const useDayCounter = () => {
       } else {
         setDays(Math.floor(current));
       }
-    }, ANIMATION_CONFIG.interval);
+    }, ANIMATION_CONFIG.counterInterval);
 
     return () => clearInterval(timer);
   }, []);
 
   return days;
-};
-
-const useGitHubPosts = () => {
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, ANIMATION_CONFIG.loadingDelay);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  return { loading };
 };
 
 // ==================== 컴포넌트 ====================
@@ -169,26 +153,16 @@ function CalendarGrid({ calendarData }: { calendarData: CalendarDate }) {
   const renderDays = () => {
     const days = [];
 
-    // 빈 칸들
     for (let i = 0; i < firstDay; i++) {
       days.push(<div key={`empty-${i}`} className="w-8 h-8" />);
     }
 
-    // 날짜들
     for (let date = 1; date <= lastDate; date++) {
       const isToday = date === today;
-
       days.push(
         <div
           key={date}
-          className={`
-            w-8 h-8 flex items-center justify-center text-xs rounded transition-all cursor-pointer
-            ${
-              isToday
-                ? "bg-blue-500 text-white font-bold"
-                : "text-gray-500 hover:text-gray-300"
-            }
-          `}
+          className={`w-8 h-8 flex items-center justify-center text-xs rounded transition-all cursor-pointer ${isToday ? "bg-blue-500 text-white font-bold" : "text-gray-500 hover:text-gray-300"}`}
         >
           {date}
         </div>,
@@ -200,7 +174,6 @@ function CalendarGrid({ calendarData }: { calendarData: CalendarDate }) {
 
   return (
     <>
-      {/* 요일 헤더 */}
       <div className="grid grid-cols-7 gap-1 mb-2">
         {WEEK_DAYS.map((day) => (
           <div
@@ -211,8 +184,6 @@ function CalendarGrid({ calendarData }: { calendarData: CalendarDate }) {
           </div>
         ))}
       </div>
-
-      {/* 날짜 그리드 */}
       <div className="grid grid-cols-7 gap-1">{renderDays()}</div>
     </>
   );
@@ -222,13 +193,10 @@ function MiniCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const calendarData = getCalendarData(currentDate);
 
-  const handlePrevMonth = () => {
+  const handlePrevMonth = () =>
     setCurrentDate(new Date(calendarData.year, calendarData.month - 1));
-  };
-
-  const handleNextMonth = () => {
+  const handleNextMonth = () =>
     setCurrentDate(new Date(calendarData.year, calendarData.month + 1));
-  };
 
   return (
     <div className="bg-gray-900/50 backdrop-blur-lg border border-blue-500/20 rounded-lg p-4">
@@ -238,10 +206,7 @@ function MiniCalendar() {
         onPrevMonth={handlePrevMonth}
         onNextMonth={handleNextMonth}
       />
-
       <CalendarGrid calendarData={calendarData} />
-
-      {/* 범례 */}
       <div className="flex items-center justify-center mt-3 text-xs">
         <div className="flex items-center space-x-1">
           <div className="w-2 h-2 bg-blue-500 rounded" />
@@ -265,27 +230,96 @@ function LoadingSkeleton() {
   );
 }
 
-function EmptyState() {
+function EmptyState({ error }: { error?: string | null }) {
   return (
     <div className="text-center py-8 text-gray-500">
-      <div className="text-2xl mb-2">📄</div>
-      <div className="text-sm">GitHub 연동 준비 중</div>
-      <div className="text-xs text-gray-600 mt-1">API 연결이 필요합니다</div>
+      <div className="text-2xl mb-2">{error ? "❌" : "📄"}</div>
+      <div className="text-sm">
+        {error ? "GitHub 포스트 로드 실패" : "포스트가 없습니다"}
+      </div>
+      {error && (
+        <div className="text-xs text-red-400 mt-1 max-w-xs mx-auto truncate">
+          {error}
+        </div>
+      )}
     </div>
   );
 }
 
+function PostItem({ post }: { post: any }) {
+  const category = getPostCategory(post.path);
+  const icon = getPostIcon(category);
+  const title = formatPostTitle(post.name);
+
+  return (
+    <a
+      href={post.html_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block p-3 hover:bg-gray-800/50 rounded-lg transition-colors group"
+    >
+      <div className="flex items-start space-x-3">
+        <div className="text-sm mt-0.5 group-hover:scale-110 transition-transform">
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center space-x-2 mb-1">
+            <span className="text-xs text-blue-400 font-medium">
+              {category}
+            </span>
+            <div className="w-1 h-1 bg-gray-600 rounded-full" />
+            <span className="text-xs text-gray-500 truncate">{post.path}</span>
+          </div>
+          <div className="text-sm text-gray-300 group-hover:text-white transition-colors line-clamp-2">
+            {title}
+          </div>
+        </div>
+        <div className="text-gray-500 group-hover:text-gray-300 transition-colors">
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+            />
+          </svg>
+        </div>
+      </div>
+    </a>
+  );
+}
+
 function GitHubPosts() {
-  const { loading } = useGitHubPosts();
+  const { posts, isLoading, error } = useGitHubPosts(5);
 
   return (
     <div className="bg-gray-900/50 backdrop-blur-lg border border-blue-500/20 rounded-lg p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-blue-300">GitHub Posts</h3>
-        <span className="text-xs text-gray-400">edith-docs</span>
+        <h3 className="text-sm font-medium text-blue-300">Recent Posts</h3>
+        <div className="flex items-center space-x-2">
+          <span className="text-xs text-gray-400">edith-docs</span>
+          {!isLoading && !error && (
+            <span className="text-xs text-green-400">{posts.length}개</span>
+          )}
+        </div>
       </div>
 
-      {loading ? <LoadingSkeleton /> : <EmptyState />}
+      {isLoading ? (
+        <LoadingSkeleton />
+      ) : error || posts.length === 0 ? (
+        <EmptyState error={error} />
+      ) : (
+        <div className="space-y-1">
+          {posts.map((post, index) => (
+            <PostItem key={index} post={post} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
