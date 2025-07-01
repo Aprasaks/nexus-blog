@@ -1,21 +1,21 @@
 // src/lib/hooks/useGitHub.ts
-import { useState, useEffect } from "react";
-import { githubService } from "../services/github";
-import { GITHUB_CONFIG } from "../config/constants";
+import { useState, useEffect } from 'react'
+import { githubService } from '../services/github'
+import { GITHUB_CONFIG } from '../config/constants'
 
 // GitHub 통계 데이터 타입
 interface GitHubStatsData {
-  postCount: number;
-  totalCommits: number;
-  isLoading: boolean;
-  error: string | null;
+  postCount: number
+  totalCommits: number
+  isLoading: boolean
+  error: string | null
 }
 
 // GitHub 포스트 데이터 타입
 interface GitHubPostsData {
-  posts: any[];
-  isLoading: boolean;
-  error: string | null;
+  posts: any[]
+  isLoading: boolean
+  error: string | null
 }
 
 // 포스트 + 내용 타입 (AI 분석용)
@@ -49,7 +49,7 @@ export function useGitHubStats(): GitHubStatsData {
     totalCommits: 0,
     isLoading: true,
     error: null,
-  });
+  })
 
   useEffect(() => {
     async function fetchStats() {
@@ -57,27 +57,27 @@ export function useGitHubStats(): GitHubStatsData {
         const [postCount, totalCommits] = await Promise.all([
           githubService.getPostCount(GITHUB_CONFIG.owner),
           githubService.getTotalCommitCount(GITHUB_CONFIG.owner),
-        ]);
+        ])
 
         setData({
           postCount,
           totalCommits,
           isLoading: false,
           error: null,
-        });
+        })
       } catch (error) {
-        setData((prev) => ({
+        setData(prev => ({
           ...prev,
           isLoading: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        }));
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }))
       }
     }
 
-    fetchStats();
-  }, []);
+    fetchStats()
+  }, [])
 
-  return data;
+  return data
 }
 
 /**
@@ -88,34 +88,34 @@ export function useGitHubPosts(limit: number = 5): GitHubPostsData {
     posts: [],
     isLoading: true,
     error: null,
-  });
+  })
 
   useEffect(() => {
     async function fetchPosts() {
       try {
         const posts = await githubService.getRecentPosts(
           GITHUB_CONFIG.owner,
-          limit,
-        );
+          limit
+        )
 
         setData({
           posts,
           isLoading: false,
           error: null,
-        });
+        })
       } catch (error) {
         setData({
           posts: [],
           isLoading: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
       }
     }
 
-    fetchPosts();
-  }, [limit]);
+    fetchPosts()
+  }, [limit])
 
-  return data;
+  return data
 }
 
 /**
@@ -260,20 +260,20 @@ export function usePostContent(downloadUrl: string | null) {
  * GitHub 연결 상태를 확인하는 Hook
  */
 export function useGitHubStatus() {
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(true)
 
   useEffect(() => {
     const checkStatus = () => {
-      setIsOnline(Math.random() > 0.1); // 90% 확률로 온라인
-    };
+      setIsOnline(Math.random() > 0.1) // 90% 확률로 온라인
+    }
 
-    checkStatus();
-    const interval = setInterval(checkStatus, 30000);
+    checkStatus()
+    const interval = setInterval(checkStatus, 30000)
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => clearInterval(interval)
+  }, [])
 
-  return isOnline;
+  return isOnline
 }
 
 // 타입 익스포트 (다른 컴포넌트에서 사용할 수 있도록)
