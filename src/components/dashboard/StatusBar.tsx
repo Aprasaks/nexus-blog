@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useGitHubStats, useGitHubStatus } from '@/lib/hooks/useGitHub'
+import { usePosts } from '@/lib/hooks/usePosts'
 import { ANIMATION_CONFIG } from '@/lib/config/constants'
 
 // ==================== 타입 정의 ====================
@@ -18,14 +18,14 @@ interface StatusCardProps {
 interface StatData {
   posts: number
   visitors: number
-  commits: number
+  categories: number
 }
 
 // ==================== 상수 ====================
 const MOCK_DATA: StatData = {
-  posts: 42,
+  posts: 0,
   visitors: 1247,
-  commits: 156,
+  categories: 0,
 }
 
 // ==================== 유틸리티 함수 ====================
@@ -34,6 +34,31 @@ const getStatusColor = (isOnline: boolean): string =>
 
 const getStatusText = (isOnline: boolean): string =>
   isOnline ? 'online' : 'offline'
+
+// GitHub API 상태 확인 (간단한 핑 체크)
+const useGitHubStatus = () => {
+  const [isOnline, setIsOnline] = useState(true)
+
+  useEffect(() => {
+    const checkGitHubStatus = async () => {
+      try {
+        const response = await fetch('https://api.github.com', {
+          method: 'HEAD',
+        })
+        setIsOnline(response.ok)
+      } catch {
+        setIsOnline(false)
+      }
+    }
+
+    checkGitHubStatus()
+    const interval = setInterval(checkGitHubStatus, 60000) // 1분마다 체크
+
+    return () => clearInterval(interval)
+  }, [])
+
+  return isOnline
+}
 
 // ==================== 컴포넌트 ====================
 function AnimatedCounter({
@@ -115,42 +140,43 @@ function SectionHeader() {
 
 // ==================== 메인 컴포넌트 ====================
 export default function StatusBar() {
+  const { posts, isLoading, error, getCategories } = usePosts()
   const isGitHubOnline = useGitHubStatus()
-  const githubStats = useGitHubStats()
+
+  // 통계 데이터 계산
+  const stats = {
+    posts: posts.length,
+    visitors: MOCK_DATA.visitors, // 방문자는 여전히 Mock 데이터
+    categories: getCategories().length,
+  }
 
   // 에러가 있으면 Mock 데이터 사용
-  const finalData = githubStats.error
-    ? MOCK_DATA
-    : {
-        posts: githubStats.postCount,
-        visitors: MOCK_DATA.visitors, // 방문자는 아직 Mock 데이터
-        commits: githubStats.totalCommits,
-      }
+  const finalData = error ? MOCK_DATA : stats
 
   const statusCards = [
     {
       icon: '📝',
       title: 'Total Posts',
       value: finalData.posts,
-      subtitle: githubStats.error ? 'mock data' : 'from edith-docs',
+      subtitle: error ? 'failed to load' : 'from edith-docs',
       color: 'bg-blue-500/20',
-      isLoading: githubStats.isLoading,
+      isLoading: isLoading,
     },
     {
-      icon: '👥',
-      title: 'Visitors',
-      value: finalData.visitors,
-      subtitle: 'this month (mock)',
-      color: 'bg-green-500/20',
-      isLoading: false,
+      icon: '📁',
+      title: 'Categories',
+      value: finalData.categories,
+      subtitle: error ? 'failed to load' : 'active folders',
+      color: 'bg-purple-500/20',
+      isLoading: isLoading,
     },
     {
       icon: '📊',
       title: 'GitHub',
-      value: finalData.commits,
-      subtitle: `commits • ${getStatusText(isGitHubOnline)}${githubStats.error ? ' (mock)' : ''}`,
+      value: finalData.visitors,
+      subtitle: `API ${getStatusText(isGitHubOnline)} • visitors (mock)`,
       color: getStatusColor(isGitHubOnline),
-      isLoading: githubStats.isLoading,
+      isLoading: false,
     },
   ]
 
@@ -162,10 +188,29 @@ export default function StatusBar() {
           <StatusCard key={index} {...card} />
         ))}
       </div>
+
+      {/* 추가 정보 */}
+      {!isLoading && !error && posts.length > 0 && (
+        <div className='bg-gray-900/30 border border-blue-500/10 rounded-lg p-3'>
+          <div className='flex items-center justify-between text-xs'>
+            <span className='text-gray-400'>Last Updated</span>
+            <span className='text-gray-300'>
+              {new Date().toLocaleTimeString('ko-KR')}
+            </span>
+          </div>
+          <div className='flex items-center justify-between text-xs mt-1'>
+            <span className='text-gray-400'>Latest Post</span>
+            <span className='text-gray-300 truncate ml-2 max-w-32'>
+              {posts[0]?.title || 'N/A'}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* 개발용 에러 표시 */}
-      {process.env.NODE_ENV === 'development' && githubStats.error && (
+      {process.env.NODE_ENV === 'development' && error && (
         <div className='text-xs text-red-400 p-2 bg-red-900/20 rounded'>
-          GitHub API Error: {githubStats.error}
+          GitHub API Error: {error}
         </div>
       )}
     </div>

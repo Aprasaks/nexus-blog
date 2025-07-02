@@ -3,9 +3,9 @@
 
 export default function AIPanel() {
   return (
-    <div className='space-y-4'>
+    <div className='h-full flex flex-col'>
       {/* 헤더 */}
-      <div className='flex items-center space-x-2'>
+      <div className='flex items-center space-x-2 mb-4'>
         <div className='w-2 h-2 bg-blue-400 rounded-full animate-pulse'></div>
         <h2 className='text-lg font-light text-blue-300 tracking-wider'>
           AI ASSISTANT
@@ -13,7 +13,7 @@ export default function AIPanel() {
       </div>
 
       {/* 메인 AI 패널 */}
-      <div className='bg-gray-900/50 backdrop-blur-lg border border-blue-500/20 rounded-lg p-8'>
+      <div className='bg-gray-900/50 backdrop-blur-lg border border-blue-500/20 rounded-lg p-8 flex-1 flex items-center justify-center'>
         <div className='text-center space-y-6'>
           {/* 제목 */}
           <div>
